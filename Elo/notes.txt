@@ -1,0 +1,5 @@
+make links that are more recent more probable since a recent win is more significant than a win 1 year ago
+
+could also give higher weighting to wins by black, by examining how often black wins in the given dataset
+
+or do two pageranks, one for white wins, one for black wins, and one for combined, to get the best white/black player
