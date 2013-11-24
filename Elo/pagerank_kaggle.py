@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# runs pagerank on the Elo dataset from kaggles competition
+# format is
+# "Month #","White Player #","Black Player #","Score"
+
 import sys
 import pprint as pprint
 import numpy
@@ -58,7 +62,6 @@ for line in f:
     create_link(graph, black, white)
     create_link(graph, white, black)
 
-print 'fixing stuff'
 # make sure that dangling nodes are included in our graph with empty adjacency lists
 for player in players:
   if player not in graph.keys():
@@ -69,12 +72,11 @@ for player in players:
 # eg 1, 3, 4, 5, 7 -->> 0, 1, 2, 3, 4
 fix_up_ids(graph, players)
 
-print 'showing graph\n\n'
-for key in sorted(graph.keys(), key=int):
-  print key, graph[key]
+#print 'showing graph\n\n'
+#for key in sorted(graph.keys(), key=int):
+#  print key, graph[key]
 
 num_players = len(players)
-print num_players
 
 # create a matrix G1 where the i-th row contains 1 / #(Pi) in the j-th col
 # if there is a link from i to j
@@ -83,9 +85,9 @@ g_1 = [[0 for i in range(num_players)] for j in range(num_players)]
 for key, value in graph.iteritems():
   for player in value:
     g_1[key][player] = 1.0 / len(value)
-  print key, "-->>", value
+#  print key, "-->>", value
 
-pprint.pprint(g_1)
+#pprint.pprint(g_1)
 
 # g_1 matrix complete
 
@@ -97,13 +99,13 @@ pprint.pprint(g_1)
 # else just make a copy of the row
 g_2 = [[1.0 / num_players] * num_players if all([i == 0 for i in row]) else row[:] for row in g_1]
 
-pprint.pprint(g_2)
+#pprint.pprint(g_2)
 
-for row in g_2:
-  sum = 0
-  for item in row:
-    sum += item
-  print sum
+#for row in g_2:
+#  sum = 0
+#  for item in row:
+#    sum += item
+#  print sum
 
 # all rows sum to 1, as expected
 
@@ -111,25 +113,23 @@ for row in g_2:
 
 g = [[( (alpha * entry) + ((1-alpha)/num_players) ) for entry in row] for row in g_2] 
 
-pprint.pprint(g)
-
-for row in g:
-  sum = 0
-  for item in row:
-    sum += item
-  print sum
+#pprint.pprint(g)
 
 
-print "starting pagerank"
+#for row in g:
+#  sum = 0
+#  for item in row:
+#    sum += item
+#  print sum
+
 
 x = [0] * num_players
 x[0] = 1
 
-print
-
-for i in range(10000):
+for i in range(1000):
   x = numpy.dot(x, g)
-  print x
+
+print x
 
 
 

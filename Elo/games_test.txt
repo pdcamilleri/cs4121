@@ -1,0 +1,3 @@
+View|Date|White|Black|W ELO|B ELO|Av ELO|Event|Site|ECO|Opening|Round|Res|# Mvs
+View|Date|Carlsen, Magnus|Anand, Viswanathan|W ELO|B ELO|Av ELO|Event|Site|ECO|Opening|Round|0-1|# Mvs
+View|Date|Carlsen, Magnus|Anand, Viswanathan|W ELO|B ELO|Av ELO|Event|Site|ECO|Opening|Round|1-0|# Mvs

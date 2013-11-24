@@ -1,0 +1,947 @@
+\documentclass[pdftex,11pt,a4paper]{report}
+\usepackage[dvips]{graphicx} % to include images
+\usepackage{multicol}
+\usepackage{cite}
+\usepackage{listings}
+%\usepackage{algorithmicx}
+%\usepackage[noend]{algpseudocode}
+%\usepackage{algorithm}
+\usepackage{float}
+%%\restylefloat{figure}
+\usepackage{url}
+\usepackage{mathtools}
+\usepackage{setspace}
+\usepackage{epsfig}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\usepackage{amsfonts}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper]{geometry}
+\usepackage{amsmath}
+\setcounter{MaxMatrixCols}{48}
+%\usepackage{resizegather}
+
+%% \doublespacing is double line spacing. Remove to use normal spacing
+\doublespacing
+
+\lstset{ % settings for the code listing package
+language=C++,
+basicstyle=\footnotesize, % the size of the fonts that are used for the code
+showspaces=false,
+showstringspaces=false,
+showtabs=false,
+tabsize=2,
+captionpos=b, % sets the caption-position to bottom
+breaklines=true, % sets automatic line breaking
+breakatwhitespace=false, % sets if automatic breaks should only happen at whitespace
+escapeinside={\%*}{*)} % if you want to add a comment within your code
+}
+\setlength{\oddsidemargin}{0.0in}
+\setlength{\evensidemargin}{0.0in}
+\setlength{\topmargin}{-0.25in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{9.25in}
+\setlength{\parindent}{0in}
+\setlength{\parskip}{2mm}
+
+\begin{document}
+
+\thispagestyle{empty}
+\begin{titlepage}
+  \null\vskip1.5cm
+  \begin{center}
+    {\rmfamily\Large THE UNIVERSITY OF NEW SOUTH WALES \\ 
+       THE SCHOOL OF COMPUTER SCIENCE AND ENGINEERING}
+  \end{center}
+  \vskip1cm
+  \begin{center}
+  \includegraphics[scale=0.3]{logoUNSW.jpg}
+  \end{center}
+  \vskip2cm
+  \begin{center}
+     {\rmfamily\Large Comparison of Elo and PageRank based ranking systems for Chess} \\
+     {\rmfamily\normalsize COMP4121: Advanced and Parellel Algorithms} \\
+     {\rmfamily\normalsize Dr. Aleksandar Ignjatovi\'{c} \\ November, 2013} \\
+  \end{center}
+  \vskip2cm
+  \begin{center}
+  %\includegraphics[scale=0.3]{logoUNSW.jpg}
+  \end{center}
+  \begin{center}
+     {\rmfamily\Large Peter D. Camilleri \\ 
+                      z3289625 \\ 
+                      pdc@cse.unsw.edu.au \\
+}
+  \end{center}
+  
+  
+  \vfill
+\end{titlepage}
+\newpage
+
+
+\thispagestyle{empty}
+\newpage
+\pagenumbering{roman}
+
+\newpage
+\tableofcontents
+\newpage
+\pagenumbering{arabic}
+
+\pagebreak
+
+\begin{abstract}
+
+Chess Grandmasters are currently ranked by the Elo rating system whereby
+each player has a numerical rating, and gains rating points when they defeat
+other players. In this report, a new rating system is developed by constructing
+a network between all the players based on wins, draws and losses, and by then
+applying both PageRank and a modified PageRank algorithm, dubbed ChessRank,
+         to the resulting graph. The key idea
+behind the PageRank algorithm is that a page is highly ranked if it is
+linked to by other highly ranked pages. Or, in the case of chess, a player
+is highly ranked if they defeat other highly ranked players. Both the PageRank and ChessRank
+algorithms were tested on the chess games played between the top
+chess grandmasters from 2012-2013. The results indicate that both algorithms
+are less accurate than the Elo rating
+system currently used in practice.
+
+\end{abstract}
+
+\pagebreak
+
+
+%%%% Introduction %%%%
+
+\chapter{Introduction}
+
+PageRank is an algorithm that was developed to rank the important of pages in a network. 
+So PageRank gives pages a high rank if they are linked to by many other pages which themselves
+have a high rank. The PageRank algorithm has also been applied in the sporting domain, such as with
+American Football\cite{football} and with tennis \cite{tennis}.
+
+In this report, the PageRank algorithm is applied to the game of chess. This is done
+by building a network where the worlds top
+chess grandmasters are the nodes and the games played between them are the links.
+
+The original PageRank algorithm is first implemented and evaluated
+against the current ranking system used by the World Chess Federeation, more commonly
+known as FIDE (from the French acronym Fédération internationale des échecs).
+In comparison, the PageRank rankings are relatively inaccurate.
+
+Then a modified PageRank algorithm is then implemented, called ChessRank,
+by taking into account extra information such as repeated wins and down-weighting
+draws, to produce another ranking. This is again evaluated against the current FIDE rankings,
+and while ChessRank does slightly better than the original PageRank algorithm, it is still inferior
+to the current FIDE rankings.
+
+\chapter{PageRank}
+
+\section{Explanation}
+
+PageRank is an algorithm that is used to rank the important of pages on the web.
+It is based on the idea that an important page is linked to by many other pages, who
+are also important. 
+
+PageRank can be explained by considering the following scenario.
+Let's say that a person, who we shall call the Random Surfer, picks a page on the Internet completely at random.
+They them click on a link that exists on this page at random. The Random Surfer then
+continues to do this for an extremely long time. If the number of pages on the internet is $M$, then
+we shall let the Random Surfer visit $T$ = 1000 * $M$ pages.
+
+The Random Surfer has been moving around the Internet randomly for a significant
+period of clicks, so we can then say that if a page P was important, then the Random Surfer
+would have ended up on that page more often that other less important pages. So we can say that
+$N(P) / M$ would be an accurate way to rank the pages on the web, where $N(P)$ is the total
+number of times the Random Surfer visiting the page P during their surf.
+
+This has two problems:
+
+\begin{enumerate}
+   \item What if a page happens to contain no links? What should the Random Surfer do
+         in such situations?
+   \item The choice that the Random Surfer makes may influence the final ranks. For example,
+         consider a network that has two groups of nodes $X$ and $Y$, whereby every node in
+         $X$ only has links to other nodes in $X$, and similarly for the group of nodes in $Y$.
+         In such a situation, if the Random Surfer visits a node $x \in X$ then the Random Surfer
+         will be trapped and the final PageRanks will assigned to all the nodes in $X$ will be non-zero
+         while every node $n \not \in X$ will have a PageRank of 0. Similarly, if the Random Surfer visits
+         a node $y$ in $Y$, then all the nodes in Y will have a non-zero PageRank. It is clear that
+         this is a problem because the PageRank is influenced on choices that the Random Surfer makes,
+         and such a PageRank is meaningless.
+         What we want is for the Random Surfer's surfing history to not affect the final PageRanks. That is,
+         as $T \rightarrow \infty$ then $N(P) / T$ should converge to some value.
+\end{enumerate}
+
+We solve the first problem by allowing the Random Surfer to pick another page at random when
+they reach a \emph{dangling node}. 
+
+To solve the second problem, we allow the Random Surfer to jump to another random page, 
+with some small probability. So most of the time they will follow a link, but a small
+percentage of the time, they will move to a random page and continue to surf.
+
+These two modifications solves our two problems and gives us a PageRank that is independent of
+the surfing history of the Random Surfer and also ensures that $N(P) / T$ converges to a 
+value, known as the PageRank.
+
+\section{Implementation}
+
+To implement PageRank we construct a transition matrix, $G$, for the Random Surfer, where the
+entry $g(i,j)$ is the $i^{th}$ row and $j^{th}$ column of $G$, and represents the probability
+of the Random Surfer moving to the $j^{th}$ if they are current at the $i^{th}$ page.
+
+To build such a transition matrix $G$, we first start with a matrix $G_1$ that would represent
+what the matrix would look like assuming that we did not solve the two problems raised in the
+previous section. 
+
+
+%\begin{gather*}
+%  \setlength{\arraycolsep}{.75\arraycolsep}
+%  \text{\footnotesize$\displaystyle
+%    \begin{pmatrix}
+%         & 0\ 0\ 0 & \dots & 0\ 0\ 0 \\
+%         & 0 & \frac{1}{\#(P_i)} 0 & \dots & 0 & \frac{1}{\#(P_i)} & 0 \\
+%    \end{pmatrix}
+%  $}
+%\end{gather*}
+%
+%         & & \vdots & & \vdots & & \vdots \\
+%         & \dots\ 0\ 0\ 0\ & 0\ 0\ 0\ 0 &  & & &\ 0\ 0\ 0\ 0\ & \dots \\
+%         & & \vdots & & \vdots & & \vdots \\
+%         & 0\ 0\ 0\ 0\ \frac{1}{\#(P_i)}\ 0\ 0\ 0\ & & & &\ 0\ 0\ 0\ \frac{1}{\#(P_i)}\ 0\ 0\ 0 & \dots \\
+%         & \dots & \vdots & & \vdots & & \vdots \\
+
+In such a matrix $G_1$, there is a row of zeros if the page $P_i$ is a dangling node
+and the entry $g(i, j)$ contains the value $1 / \#(P_i)$ if there is
+a link on page $P_i$ going to page $P_j$, where $\#(P_i)$ contains the total
+number of links on the page $P_i$.
+
+We will then improve upon this matrix $G_1$ by solving the first problem raised,
+that of dangling nodes. 
+
+%\begin{gather*}
+  %\setlength{\arraycolsep}{.75\arraycolsep}
+  %\text{\footnotesize$\displaystyle
+    %\begin{pmatrix}
+         %& \frac{1}{M}\ \frac{1}{M}\ \frac{1}{M} & \dots & \frac{1}{M}\ \frac{1}{M}\ \frac{1}{M} \\
+         %& 0 & \frac{1}{\#(P_i)} 0 & \dots & 0 & \frac{1}{\#(P_i)} & 0 \\
+    %%\end{pmatrix}
+%  $}
+%\end{gather*}
+
+If the Random Surfer reaches such a page, then they jump
+to a random page, and since all pages are equally likely destinations, the chance
+of any page $P_i$ being chosen is $1 / M$.
+
+To solve the second problem, the Random Surfer jumps to a random page with some small
+probability, even when the current page has outgoing links. Let $\alpha \in [0, 1]$
+be the chance that the Random Surfer chooses a link on the current page, and $1 - \alpha$
+be the chance that the Random Surfer chooses a random page from the entire Internet.
+
+%\begin{gather*}
+%  \setlength{\arraycolsep}{.75\arraycolsep}
+%  \text{\footnotesize$\displaystyle
+%    \begin{pmatrix}
+%         & \frac{1}{M}\ \frac{1}{M}\ \frac{1}{M} & \dots & \frac{1}{M}\ \frac{1}{M}\ \frac{1}{M} \\
+%         & 0 & \frac{\alpha}{\#(P_i)} + \frac{1 - \alpha}{M} 0 & \dots & 0 & \frac{\alpha}{\#(P_i)} + \frac{1 - \alpha}{M} & 0 \\
+%    \end{pmatrix}
+%  $}
+%\end{gather*}
+
+Now the entry $g(i, j)$ is $$\frac{\alpha}{\#(P_i)} + \frac{1 - \alpha}{M}$$ And this gives us our final transition matrix for the Random Surfer. One thing to note
+is that because this is a transition matrix of what the Random Surfer can do
+when it is on a page $P_i$, the sum of each row is 1, meaning that the matrix is row-stochastic.
+Because $G$ is stochastic,
+we can think of our scenario of the Random Surfer as being a Markov Chain, where the pages in the Internet
+are the states and our matrix G as the stochastic matrix. This means we can use properties of Markov chains,
+in particular:
+
+\emph{
+For any probability vector $\overrightarrow{q}^{(0)}$ the value of 
+$\overrightarrow{q}^{(t)} = \overrightarrow{q}^{(0)} \cdot G^t$
+converges to a unique stationary distribution $\overrightarrow{q}$.
+}
+
+This means that all we need to do to compute the PageRank is choose any probability vector $\overrightarrow{q}^{(0)}$ and
+iteratively multiply it against our transition matrix G until the differences between
+$\overrightarrow{q}^{(n)}$ and $\overrightarrow{q}^{(n - 1)}$ is sufficiently small.
+
+\chapter{Application to Chess}
+
+The previous chapter describes how the PageRank can be applied to pages on the Internet.
+The key idea is that pages are given a high rank if they are linked to by other high ranking pages.
+We can can use this same idea to rank chess players. A chess player is highly ranked if 
+that chess player is linked to by other highly ranked chess players. In this sense, the links
+from players are based on wins, draws and losses.
+
+A player $C_i$ will link to a player $C_j$ if $C_i$ has lost to $C_j$ in a chess match. 
+$C_j$ was the winner
+which implies that $C_j$ is the better player, 
+so this is why there is a link from $C_i$ to $C_j$.
+
+One must also consider the fact that the result of a chess match can be a draw. 
+In such a case, a link is created back and forth between each player.
+If $C_i$ and $C_j$ draw, and let us say that $C_i$ is the better player, that is, has a better rank,
+Then creating the two links $C_i \rightarrow C_j$ and $C_j \rightarrow C_i$ would benefit $C_j$ more 
+as $C_j$ is now being linked to by better player, which is intuitively what we would want; a draw
+should benefit the ranking of the weaker player.
+
+Dangling nodes in the case of chess players are players that have only ever won chess games and have never lost.
+This is extremely unlikely, but in such a case the method used for PageRank on webpages
+still seems appropriate. This player has never lost, but if they were to lose, they would
+have an equal chance of losing to every other player, so a row of $1 / M$ is appropriate.
+
+For the other problem of a group of players only linking to eachother, the
+solution used in PageRank also works.
+Once again, this kind of structure in the network is extremely unlikely to occur.
+
+In PageRank, $1 - \alpha$ is the chance of a random jump. In our setup, a random jump would mean
+that a player $C_i$ loses to $C_j$. Chess is not a game of chance in any regard
+and it is extremely unlikely that a chess player would lose 
+to another chess player at random, so alpha is given a relatively high value of 0.99 meaning
+that random jumps only occur 1\% of the time.
+
+\chapter{Results \& Evaluation - PageRank}
+
+\section{Elo Rating System}
+
+The current system used by the World Chess Federeation, more commonly known
+as FIDE (from the French acronym Fédération internationale des éche is the Elo rating system.
+The Elo system gives players a numerical rating based on their performance against other players. 
+
+When Player A and Player B verse each other in a match, the following formula is used to determine the 
+expected score for Player A in the match:
+
+$$E_A = \frac{1}{1 + 10^{(R_B - R_A)/400}}$$
+
+Where $R_A$ and $R_B$ are the current ratings of Players A and B respectively. Similarly, the expected score for Player B, $E_B$, is:
+
+$$E_B = \frac{1}{1 + 10^{(R_A - R_B)/400}}$$
+
+Where $E_A + E_B = 1$. The expected score is the probability of the Player A winning plus half
+of their probability of drawing.
+
+At the end of the match, rating points are gained or lost via the following formula:
+
+$$R'_A = R_A + K(S_A - E_A)$$
+
+Where $S_A$ is the result of the match: 1 for a win, 0 for a loss and 0.5 for a draw, and K, called the K-factor, which is used to moderate how
+sensitive ratings are to change. A typical K-factor for grandmasters is 16. For example, if a Player A, rating of 2600, defeats 
+Player B, rating of 2500, then $E_A = \frac{1}{1 + 10^{(2500 - 2600)/400}} = 0.64$ and $R'_A = 2600 + 16(1 - 0.64) = 2606$ for a gain of 6 points.
+Because the Elo rating system is zero-sum, Player B's score will decrease by the same margin of 6 points.
+
+\section{PageRank vs. Elo}
+
+PageRank was run on the chess games of players who were rated at 2700 or above
+in 2012 or 2013. This represented approximately the top 60 chess grandmasters.
+
+Results are presented in the following table, ordered by their PageRank. 
+
+%\emph{Continue on the next page}
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Rank & Player & PageRank \\ 
+\hline
+
+1 & Karjakin, Sergey & 0.03940085 \\
+2 & Nakamura, Hikaru & 0.03769653 \\
+3 & Ivanchuk, Vassily & 0.03587794 \\
+4 & Grischuk, Alexander & 0.03558909 \\
+5 & Wang, Hao & 0.03501970 \\
+6 & Mamedyarov, Shakhriyar & 0.03423768 \\
+7 & Radjabov, Teimour & 0.03346909 \\
+8 & Caruana, Fabiano & 0.03308060 \\
+9 & Aronian, Levon & 0.03307432 \\
+10 & Carlsen, Magnus & 0.03272312 \\
+11 & Morozevich, Alexander & 0.03110839 \\
+12 & Leko, Peter & 0.03107944 \\
+13 & Ponomariov, Ruslan & 0.02902584 \\
+14 & Gelfand, Boris & 0.02862289 \\
+15 & Svidler, Peter & 0.02675802 \\
+16 & Giri, Anish & 0.02665729 \\
+17 & Topalov, Veselin & 0.02561540 \\
+18 & Kamsky, Gata & 0.02534695 \\
+19 & Adams, Michael & 0.02353093 \\
+20 & Kramnik, Vladimir & 0.02339114 \\
+21 & Fressinet, Laurent & 0.02195077 \\
+22 & Andreikin, Dmitry & 0.02160178 \\
+23 & DominguezPerez, Leinier & 0.02095180 \\
+
+
+\end{tabular}
+
+\end{singlespace}
+\emph{Continue on the next page}
+
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+\small
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Rank & Player & PageRank \\ 
+
+\hline
+
+
+
+24 & Jakovenko, Dmitry & 0.01803993 \\
+25 & Ding, Liren & 0.01771998 \\
+26 & Jobava, Baadur & 0.01709735 \\
+27 & Tomashevsky, Evgeny & 0.01682929 \\
+28 & Shirov, Alexei & 0.01608468 \\
+
+
+29 & Bologan, Viktor & 0.01566243 \\
+30 & Navara, David & 0.01539406 \\
+31 & Naiditsch, Arkadij & 0.01536454 \\
+32 & Nepomniachtchi, Ian & 0.01448215 \\
+33 & Vitiugov, Nikita & 0.01421073 \\
+34 & Anand, Viswanathan & 0.01400307 \\
+35 & Bacrot, Etienne & 0.01121875 \\
+36 & Gashimov, Vugar & 0.01073623 \\
+37 & Malakhov, Vladimir & 0.01072469 \\
+38 & Wojtaszek, Radoslaw & 0.01057302 \\
+39 & McShane, Luke & 0.00989357 \\
+40 & Sasikiran, Krishnan & 0.00821430 \\
+41 & Movsesian, Sergei & 0.00788715 \\
+42 & Volokitin, Andrei & 0.00754106 \\
+43 & BruzonBatista, Lazaro & 0.00704249 \\
+44 & Le, QuangLiem & 0.00702647 \\
+45 & Vachier-Lagrave, Maxime & 0.00666546 \\
+46 & Areshchenko, Alexander & 0.00593339 \\
+47 & Riazantsev, Alexander & 0.00557159 \\
+48 & Polgar, Judit & 0.00482493 \\
+49 & Moiseenko, Alexander & 0.00480154 \\
+50 & Eljanov, Pavel & 0.00394203 \\
+51 & VallejoPons, Francisco & 0.00385980 \\
+52 & Short, Nigel & 0.00257442 \\
+53 & Sutovsky, Emil & 0.00252970 \\
+54 & Laznicka, Viktor & 0.00224361 \\
+55 & Cheparinov, Ivan & 0.00147565 \\
+56 & Grachev, Boris & 0.00135787 \\
+57 & Almasi, Zoltan & 0.00127881 \\
+58 & Korobov, Anton & 0.00121622 \\
+59 & Inarkiev, Ernesto & 0.00016949 \\
+\end{tabular}
+\end{singlespace}
+
+% maybe cut this altogether
+At first glance, it seems as though the PageRank may not be very accurate, mainly because the current world chess Champion,
+Magnus Carlsen, has been given a PageRank that is quite low, despite having
+been the top FIDE ranked player for the past few years.
+
+We shall look at a few methods of comparing the two rankings systems in the following sections.
+
+\subsection{Method One - Average difference between rankings}
+
+One way we can compare the accuracy of PageRank to the current FIDE rankings is to 
+compute the average distance between a players two rankings. This isn't intended to imply that the
+Elo rating system is perfect and completely accurate, but rather that it would be good to compare
+any new ranking system with the current system being used, which is known to be fairly accurate,
+    to see if the rankings are somewhat similar
+to give some idea as to how accurate the new ranking system is.
+
+Let $PR(P_A)$ denote the PageRank 
+of Player A and $FR(P_A)$ denote the FIDE Rank of Player A, then our distance measurement, D, can be
+calculated as follows:
+
+$$
+   D = \sum\limits_{p \in Players} | FR(p) - PR(p) |
+$$
+
+Where Players are the chess grandmasters with Elo ratings of 2700 or above. This is shown in the following table
+comparing FIDE Ranks, PageRanks and the difference between them.
+
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Name & FIDE Ranking & PageRank & Difference \\
+\hline
+Carlsen, Magnus & 1 & 10 & 9  \\ 
+Aronian, Levon & 2 & 9 & 7  \\ 
+Kramnik, Vladimir & 3 & 20 & 17  \\ 
+Nakamura, Hikaru & 4 & 2 & 2  \\ 
+Grischuk, Alexander & 5 & 4 & 1  \\ 
+Caruana, Fabiano & 6 & 8 & 2  \\ 
+Gelfand, Boris & 7 & 14 & 7  \\ 
+Anand, Viswanathan & 8 & 34 & 26  \\ 
+Topalov, Veselin & 9 & 17 & 8  \\ 
+Mamedyarov, Shakhriyar & 10 & 6 & 4  \\ 
+Karjakin, Sergey & 11 & 1 & 10  \\ 
+DominguezPerez, Leinier & 12 & 23 & 11  \\ 
+Svidler, Peter & 13 & 15 & 2  \\ 
+Adams, Michael & 14 & 19 & 5  \\ 
+Bacrot, Etienne & 15 & 35 & 20  \\ 
+Vachier-Lagrave, Maxime & 16 & 45 & 29  \\ 
+Vitiugov, Nikita & 17 & 33 & 16  \\ 
+Wang, Hao & 18 & 5 & 13  \\ 
+Eljanov, Pavel & 19 & 50 & 31  \\ 
+Giri, Anish & 20 & 16 & 4  \\ 
+Ponomariov, Ruslan & 21 & 13 & 8  \\ 
+Ivanchuk, Vassily & 22 & 3 & 19  \\ 
+Leko, Peter & 23 & 12 & 11  \\ 
+Morozevich, Alexander & 24 & 11 & 13  \\ 
+Naiditsch, Arkadij & 25 & 31 & 6  \\ 
+Wang, Yue & 26 & not ranked & -  \\ 
+Tomashevsky, Evgeny & 27 & 27 & 0  \\ 
+Nepomniachtchi, Ian & 28 & 32 & 4  \\ 
+Jakovenko, Dmitry & 29 & 24 & 5  \\ 
+Kamsky, Gata & 30 & 18 & 12  \\ 
+Areshchenko, Alexander & 31 & 46 & 15  \\ 
+So, Wesley & 32 & not ranked & -  \\ 
+Radjabov, Teimour & 33 & 7 & 26  \\ 
+Korobov, Anton & 34 & 58 & 24  \\ 
+Ding, Liren & 35 & 25 & 10  \\ 
+Wojtaszek, Radoslaw & 36 & 38 & 2  \\ 
+Andreikin, Dmitry & 37 & 22 & 15  \\ 
+Almasi, Zoltan & 38 & 57 & 19  \\ 
+Moiseenko, Alexander & 39 & 49 & 10  \\ 
+Malakhov, Vladimir & 40 & 37 & 3  \\ 
+Fressinet, Laurent & 41 & 21 & 20  \\ 
+Rublevsky, Sergei & 42 & not ranked & -  \\ 
+Navara, David & 43 & 30 & 13  \\ 
+VallejoPons, Francisco & 44 & 51 & 7  \\ 
+Harikrishna, P. & 45 & not ranked & -  \\ 
+Le, QuangLiem & 46 & 44 & 2  \\ 
+Kryvoruchko, Yuriy & 47 & not ranked & -  \\ 
+Matlakov, Maxim & 48 & not ranked & -  \\ 
+Movsesian, Sergei & 49 & 41 & 8  \\ 
+\textbf{Total Difference} & & & 476
+\end{tabular}
+\end{singlespace}
+
+The total difference, D, between the two rankings is 476. As the dataset used to produce
+the PageRanks was based on games played in 2012, players who have increased their ranks
+above 2700 in 2013, of which there are 7, do not have PageRanks. For the 43 remaining players
+who do have PageRanks, the average difference is $476 / 50 = 11.07$
+
+The difference is marginally better if we only look at the top 10 players:
+
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Name & FIDE Ranking & PageRank & Difference \\
+\hline
+Carlsen, Magnus & 1 & 10 & 9  \\ 
+Aronian, Levon & 2 & 9 & 7  \\ 
+Kramnik, Vladimir & 3 & 20 & 17  \\ 
+Nakamura, Hikaru & 4 & 2 & 2  \\ 
+Grischuk, Alexander & 5 & 4 & 1  \\ 
+Caruana, Fabiano & 6 & 8 & 2  \\ 
+Gelfand, Boris & 7 & 14 & 7  \\ 
+Anand, Viswanathan & 8 & 34 & 26  \\ 
+Topalov, Veselin & 9 & 17 & 8  \\ 
+Mamedyarov, Shakhriyar & 10 & 6 & 4  \\ 
+\textbf{Total Difference} & & &  83
+\end{tabular}
+\end{singlespace}
+
+This gives us an average total difference of only 8.3, so the PageRank produces rankings more similar
+to the FIDE rankings when subsets closer to the top of the rankings are taken. This is likely just a 
+reflection the dataset of games that was used, as it only contained games played between
+players who have a rating above 2700. And so lower ranked players who play a large number of games
+against players below that threshold, may not be represented accurately by the dataset and the rankings that it produces.
+
+For example, the top FIDE ranked played, Magnus Carlsen, played 115 games in 2012, only 17 of those were against players ranked
+below the 2700 threshold, and so these were not included in the dataset. 
+However, David Navara, FIDE rank 43, only has 22 games in the 2012 dataset that was used, despite
+playing 137 games in 2012, because all of these other games were against lower ranked opponents.
+As a result, we would expect the PageRank of players with more games in the dataset to be more
+accurate than players with fewer games in the dataset.
+
+From these initial comparisons, it appears as though the PageRank algorithm produces a significantly different
+ranking than that of Elo. However this first comparison does not tell us much about the accuracy of either system.
+For this, we will look at another method presented in the next section.
+
+\section{Method Two - Win/Loss Prediction}
+
+The second method of evaluation is using the PageRanks to predict the results of matches
+played during 2013. We will do this by only looking at 2013 games that resulted in either
+a win or a loss, thereby discarding draws. We will then pick the higher ranked player
+as the victor of the chess game using both the Elo and PageRank systems. And finally
+look at the accuracy of each system in terms of how many times each ranking system correctly
+predicted the true outcome of the 2013 match.
+
+A total of 415 games were predicted. These are the results:
+
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Ranking System & Correct Predictions & Percentage Correct \\ 
+\hline
+
+FIDE &  239 & 0.575903614458 \\
+PageRanks & 202  &  0.486746987952 
+
+\end{tabular}
+\end{singlespace}
+
+
+So taking the higher ranked FIDE player will give the correct outcome approximately 57\% of the time,
+while doing the same with the PageRanks will only produce correct outcomes about 48\% of the time.
+It appears as though the FIDE rankings are much better than the PageRanks, but what is of particular interest
+is that picking the player with the better PageRanks gives correct predictions less than half of the time.
+This means that it is more accurate to pick the player with the worse PageRank to predict the outcomes
+of a match, which is a terrible property of any ranking system.
+
+So once again, it looks as though the PageRanking system is substantially less accurate than the current FIDE ranking system.
+
+We can also look at the predictions more directly by only examining the games where the
+ranking systems predict different winners. There were 187 conflicting predictions, the results are shown in the following table:
+
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Ranking System & Correct Predictions & Percentage Correct \\ 
+\hline
+
+FIDE &  108 & 0.577540106952 \\
+PageRank & 71 &  0.379679144385 \\
+
+\end{tabular}
+\end{singlespace}
+
+As we can see, in cases when there is a conflict, the FIDE ranking system correctly predicts the winner
+more accurately than the PageRank based system.
+
+
+Overall, it appears as though the PageRank system is not a considerably accurate ranking system.
+
+%Third method - Elo Formula
+
+%A third method of evaluation is to use the Elo system which has a formula to predict the 
+%chance that a player will win. This is a real number from 0-1. Producing a similar ranking for
+%the PageRank rankings. We can then use all games in the 2013 dataset and take the difference between
+%the Elo predicted result and the PageRank predicted result.
+%
+%Fourth Method - Multinomial Distribution
+%
+%A final method would be to produce a multinomial distribution or something. Which is hard
+%and I will do later, maybe, if I feel like it.
+
+
+
+
+
+
+
+
+
+
+\chapter{Improving PageRank - ChessRank}
+
+It appears as though the original PageRank algorithm did not produce desired results.
+This may be for a few reasons. Firstly, draws are treated as significantly as wins
+which may be giving players who draw more often higher PageRanks than they deserve.
+
+
+
+Another potential issue is that the original PageRank algorithm does not consider
+multiple links from a page $P_i$ to a page $P_j$. However, in the case of chess games,
+if a player $P_i$ defeats another player $P_j$ many times and loses only once, it would
+appear as though player $P_i$ is much better than $P_j$, but the graph and transition matrix
+for this scenario will have a single link from $P_i$ to $P_j$ and a single link the other way.
+The fact that $P_i$ has defeated $P_j$ multiple times is not captured in the structure of
+the graph or the transition matrix.
+
+
+We will modify the algorithm in two ways to try and solve these problems.
+
+Firstly, we can change how multiple links are treated. In particular, we can treat every defeat as another link.
+So in this example above, if $P_i$ defeats $P_j$ many times, then when a random surfer gets to
+$P_j$ in the network, they will follow the link to $P_i$ proportional to how many times $P_j$ has lost
+to $P_i$ over how many times $P_j$ has lost overall.
+
+Previously, when $P_j$ defeated $P_i$, the entry in the $i^{th}$ row and $j^{th}$ column
+was $\frac{1}{\#(P_i)}$ where $\#(P_i)$ was the total number of players that $P_i$ had lost to. 
+Let $G(i, j)$ be the entry in the $i^{th}$ row and $j^{th}$ column. To weight multiple wins, the entry $G(i, j)$ becomes:
+
+$$
+   G(i, j) = \dfrac{L(P_i, P_j)}{ T(P_i)  }
+$$
+
+Where $L(P_i, P_j)$ is the number of times that $P_i$ has lost to $P_j$ and $T(P_i)$ is the total number of matches that $P_i$ has lost.
+
+Secondly, we will treat draws differently.
+In the traditional chess scoring systems, a win is worth a single point and a draw is worth half a point. We can use this
+same idea to give wins a higher weighting in our transition matrix than draws. 
+
+If we let $w_w$ be the weighting given to wins, in our case 1, and $w_d$ be the weighting given to draws, 0.5, the entry $G(i, j)$ now becomes:
+
+$$
+G(i, j) = \dfrac{Losses(P_i, P_j) * w_w + Draws(P_i) * w_d}{ T(P_i) }
+$$
+
+Where $T(P_i)$ is now calculated based on wins and draws using the following formula:
+
+$$
+   T(P_i) = TotalLosses(P_i) * w_w + TotalDraws(P_i) * w_d 
+$$
+
+Again note that these changes still produce a row stochastic matrix so we can use the properties of a Markov Chain again
+to compute the PageRank given these modifications. Let modified PageRank algorithm be called ChessRank.
+
+\section{Results}
+
+ChessRank was run on the chess games of players who were rated at 2700 or above in 2012 or 2013 
+representing approximately the top 60 chess grandmasters.
+
+Results are presented in the following table, ordered by their ChessRank.
+
+ChessRanks produced are:
+
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Rank & Player & ChessRank \\ 
+\hline
+1 & Karjakin, Sergey & 0.06150454 \\
+2 & Grischuk, Alexander & 0.05331495 \\
+3 & Carlsen, Magnus & 0.05319353 \\
+4 & Nakamura, Hikaru & 0.05004709 \\
+5 & Morozevich, Alexander & 0.04920826 \\
+6 & Ivanchuk, Vassily & 0.04874709 \\
+7 & Aronian, Levon & 0.04475325 \\
+8 & Radjabov, Teimour & 0.04204825 \\
+9 & Mamedyarov, Shakhriyar & 0.03933584 \\
+10 & Gelfand, Boris & 0.03580981 \\
+11 & Caruana, Fabiano & 0.03510255 \\
+12 & Wang, Hao & 0.03497479 \\
+13 & Svidler, Peter & 0.03076264 \\
+14 & Topalov, Veselin & 0.02793112 \\
+15 & Leko, Peter & 0.02593708 \\
+16 & Andreikin, Dmitry & 0.02453672 \\
+17 & Giri, Anish & 0.02371730 \\
+18 & Kamsky, Gata & 0.02198726 \\
+19 & Kramnik, Vladimir & 0.02133255 \\
+20 & Fressinet, Laurent & 0.01687418 \\
+21 & Nepomniachtchi, Ian & 0.01649231 \\
+22 & Anand, Viswanathan & 0.01483246 \\
+23 & Jakovenko, Dmitry & 0.01459338 \\
+24 & Ponomariov, Ruslan & 0.01456103 \\
+25 & Bacrot, Etienne & 0.01380254 \\
+26 & DominguezPerez, Leinier & 0.01360244 \\
+27 & Jobava, Baadur & 0.01311958 \\
+28 & Ding, Liren & 0.01251327 \\
+29 & Adams, Michael & 0.01199479 \\
+30 & Bologan, Viktor & 0.01133846 \\
+\end{tabular}
+\end{singlespace}
+
+\emph{Continue on the next page}
+
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Rank & Player & ChessRank \\ 
+\hline
+31 & Tomashevsky, Evgeny & 0.01115340 \\
+32 & Naiditsch, Arkadij & 0.00923914 \\
+33 & Vitiugov, Nikita & 0.00863717 \\
+34 & McShane, Luke & 0.00821850 \\
+35 & Shirov, Alexei & 0.00809467 \\
+36 & Wojtaszek, Radoslaw & 0.00780951 \\
+37 & Navara, David & 0.00742856 \\
+38 & Vachier-Lagrave, Maxime & 0.00608207 \\
+39 & Moiseenko, Alexander & 0.00574723 \\
+40 & Malakhov, Vladimir & 0.00532919 \\
+41 & Gashimov, Vugar & 0.00479598 \\
+42 & Movsesian, Sergei & 0.00439722 \\
+43 & Volokitin, Andrei & 0.00386634 \\
+44 & Sasikiran, Krishnan & 0.00369925 \\
+45 & Laznicka, Viktor & 0.00354708 \\
+46 & Le, QuangLiem & 0.00345025 \\
+47 & Areshchenko, Alexander & 0.00326206 \\
+48 & Polgar, Judit & 0.00318732 \\
+49 & BruzonBatista, Lazaro & 0.00268968 \\
+50 & Riazantsev, Alexander & 0.00208692 \\
+51 & Eljanov, Pavel & 0.00189263 \\
+52 & VallejoPons, Francisco & 0.00167863 \\
+53 & Korobov, Anton & 0.00165630 \\
+54 & Sutovsky, Emil & 0.00109479 \\
+55 & Short, Nigel & 0.00093089 \\
+56 & Grachev, Boris & 0.00068674 \\
+57 & Cheparinov, Ivan & 0.00060632 \\
+58 & Almasi, Zoltan & 0.00059359 \\
+59 & Inarkiev, Ernesto & 0.00016949 \\
+\end{tabular}
+\end{singlespace}
+
+
+We can again use the same techniques to determine the accuracy of the ChessRanks.
+Firstly, we can compare the difference between the ChessRanks and the FIDE ranks using
+
+$$
+   D = \sum\limits_{p \in Players} | FR(p) - CR(p) |
+$$
+
+Where FR is the players FIDE Rank and CR is the players ChessRank. Results are as follows:
+
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Player & FIDE Rank & ChessRank & Difference \\ 
+\hline
+Carlsen, Magnus & 1 & 3 & 2  \\ 
+Aronian, Levon & 2 & 7 & 5  \\ 
+Kramnik, Vladimir & 3 & 19 & 16  \\ 
+Nakamura, Hikaru & 4 & 4 & 0  \\ 
+Grischuk, Alexander & 5 & 2 & 3  \\ 
+Caruana, Fabiano & 6 & 11 & 5  \\ 
+Gelfand, Boris & 7 & 10 & 3  \\ 
+Anand, Viswanathan & 8 & 22 & 14  \\ 
+Topalov, Veselin & 9 & 14 & 5  \\ 
+Mamedyarov, Shakhriyar & 10 & 9 & 1  \\ 
+Karjakin, Sergey & 11 & 1 & 10  \\ 
+DominguezPerez, Leinier & 12 & 26 & 14  \\ 
+Svidler, Peter & 13 & 13 & 0  \\ 
+Adams, Michael & 14 & 29 & 15  \\ 
+Bacrot, Etienne & 15 & 25 & 10  \\ 
+Vachier-Lagrave, Maxime & 16 & 38 & 22  \\ 
+Vitiugov, Nikita & 17 & 33 & 16  \\ 
+Wang, Hao & 18 & 12 & 6  \\ 
+Eljanov, Pavel & 19 & 51 & 32  \\ 
+Giri, Anish & 20 & 17 & 3  \\ 
+Ponomariov, Ruslan & 21 & 24 & 3  \\ 
+Ivanchuk, Vassily & 22 & 6 & 16  \\ 
+Leko, Peter & 23 & 15 & 8  \\ 
+Morozevich, Alexander & 24 & 5 & 19  \\ 
+Naiditsch, Arkadij & 25 & 32 & 7  \\ 
+Wang, Yue & 26 & not ranked & -  \\ 
+Tomashevsky, Evgeny & 27 & 31 & 4  \\ 
+Nepomniachtchi, Ian & 28 & 21 & 7  \\ 
+Jakovenko, Dmitry & 29 & 23 & 6  \\ 
+Kamsky, Gata & 30 & 18 & 12  \\ 
+Areshchenko, Alexander & 31 & 47 & 16  \\ 
+So, Wesley & 32 & not ranked & -  \\ 
+Radjabov, Teimour & 33 & 8 & 25  \\ 
+Korobov, Anton & 34 & 53 & 19  \\ 
+Ding, Liren & 35 & 28 & 7  \\ 
+Wojtaszek, Radoslaw & 36 & 36 & 0  \\ 
+Andreikin, Dmitry & 37 & 16 & 21  \\ 
+Almasi, Zoltan & 38 & 58 & 20  \\ 
+Moiseenko, Alexander & 39 & 39 & 0  \\ 
+Malakhov, Vladimir & 40 & 40 & 0  \\ 
+Fressinet, Laurent & 41 & 20 & 21  \\ 
+Rublevsky, Sergei & 42 & not ranked & -  \\ 
+Navara, David & 43 & 37 & 6  \\ 
+VallejoPons, Francisco & 44 & 52 & 8  \\ 
+Harikrishna, P. & 45 & not ranked & -  \\ 
+Le, QuangLiem & 46 & 46 & 0  \\ 
+Kryvoruchko, Yuriy & 47 & not ranked & -  \\ 
+Matlakov, Maxim & 48 & not ranked & -  \\ 
+Movsesian, Sergei & 49 & 42 & 7  \\ 
+\textbf{Total Difference} & & & 414
+
+\end{tabular}
+\end{singlespace}
+
+This gives a total difference of 9.63 per player, which is slightly more accurate than the original PageRank algorithm.
+
+As with PageRank, if we only look at the top 10 players, the total difference drops to 54, or a difference of 5.4 on average per player, a significant
+improvement. So perhaps if a greater dataset was used, the ChessRanks would not be completely different from the FIDE rankings.
+
+
+We shall also compare predictions using the same method as we used with the PageRank algorithm.
+
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Ranking System & Correct Predictions & Percentage Correct \\ 
+\hline
+
+FIDE & 239 & 0.575903614458 \\
+PageRank & 208 & 0.501204819277 \\
+
+\end{tabular}
+\end{singlespace}
+
+\begin{singlespace}
+\begin{tabular}{l*{6}{c}r}
+%\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth} }
+Ranking System & Correct Predictions & Percentage Correct \\ 
+\hline
+
+FIDE &  101 & 0.590643274854 \\
+PageRank &  70 & 0.409356725146 \\
+
+\end{tabular}
+\end{singlespace}
+
+We can see that with the improvements made,
+   ChessRank performs slightly better than the original PageRank algorithm as ChessRank predicted the outcome of a few more games correctly and had fewer 
+conflicting predictions to the FIDE Ranks with only 171 compared to PageRank which had 179. Also of interest is that
+with these modifications, ChessRank predicts the outcome of games with greater than 50\% accuracy.
+
+But overall, while a PageRank based ranking algorithm for Chess does produce a ranking system
+of some accuracy, but it is not very reliable and not nearly as accurate as the current Elo system used by FIDE.
+
+
+
+
+
+\chapter{Potential Improvements}
+
+The PageRank based algorithm described in this report does not appear to be as accurate as the current Elo
+system that is used. However some further changes could be made which may make the system more accurate.
+
+Firstly, the FIDE rankings are based on a players entire professional career whereas
+the PageRank algorithm only used matches played in 2012. Some players have been
+playing professionally for more than 20 years. Even the youngest players in the worlds top 50 have been
+professional for around 5 years. If a record of all games could be obtained, perhaps a more accurate
+network, and in turn, a more accurate PageRank for each player could be obtained.
+
+Secondly, a players Elo rating, and hence FIDE ranking, constantly changes based on every game 
+they play and based upon their and their opponents current Elo rating at the time of the match.
+As a result, Elo ratings are more fine grained because they take into account the time
+the match was played and its context (the rating of each player). In PageRank, a win
+is a win, regardless of when it was played. Perhaps an improvement could be made to
+weight each win in proportion to how recently the match was played, meaning that
+more recent wins are worth more than a win from several years ago.
+
+\chapter{Conclusion}
+
+In this report, matches played between top chess grandmasters were used to create
+a network of links between players. PageRank and a modified version of PageRank, named ChessRank,
+were run on these networks to produce a ranking of the players within that network. These
+rankings were compared against the current set of rankings used by FIDE. It was found that both
+PageRank and ChessRank do not produce very accurate rankings of players.
+
+
+
+
+
+
+
+
+
+
+
+%%%% Bibliography %%%%
+\bibliographystyle{plain}
+
+\clearpage\addcontentsline{toc}{chapter}{\bibname}\bibliography{references}
+
+
+\begin{thebibliography}{9}
+
+\bibitem{football}
+http://www2.sas.com/proceedings/forum2008/151-2008.pdf
+
+\bibitem{tennis}
+http://workshops.inf.ed.ac.uk/ukpew2012/proceedings/UKPEW0009/paper.pdf
+
+
+
+
+\end{thebibliography}
+
+
+
+\end{document}
+
+
+
+
